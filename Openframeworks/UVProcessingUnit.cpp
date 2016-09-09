@@ -1,34 +1,18 @@
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-//  QuantumSeedUnit.cpp
+//  UVProcessingUnit.cpp
+//  FutureAppliedTechnologiesShowcase
 //
-//  Created by Jayson Haebich, 2016 www.jaysonh.com
+//  Created by Jayson Haebich on 05/09/2016.
 //
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 
-#include "QuantumSeedUnit.hpp"
+#include "UVProcessingUnit.hpp"
 
-
-////////////////////////////////////////////////////
-// Default constructor                            //
-////////////////////////////////////////////////////
-QuantumSeedUnit::QuantumSeedUnit()
-{
-}
-
-////////////////////////////////////////////////////
-// Destructor                                     //
-////////////////////////////////////////////////////
-QuantumSeedUnit::~QuantumSeedUnit()
-{
-    // Closes serial connection to QSPU
-    close();
-}
 
 ////////////////////////////////////////////////////
 // Close Connection                               //
 ////////////////////////////////////////////////////
-void QuantumSeedUnit::close()
+void UVProcessingUnit::close()
 {
     printf("Closing serial connection\n");
     
@@ -43,10 +27,40 @@ void QuantumSeedUnit::close()
     delete mThread;
 }
 
+void UVProcessingUnit::initSerial()
+{
+    serialConn.listDevices();
+    serialConn.setup("tty.usbmodem1421", 9600);
+    
+    
+}
+
+void UVProcessingUnit::update()
+{
+    
+    /*unsigned char bytesReturned[1];
+    
+    memset(bytesReturned, 0, 1);
+    int nRead = 0;
+    
+    while( (nRead = serialConn.readBytes( bytesReturned, 1)) > 0){
+        
+        //if((int)bytesReturned[0] >=30 && (int)bytesReturned[0] <= 39 )
+        
+                    cout << (int)bytesReturned[0] <<endl;
+    };
+    */
+    
+    //int val =(int)serialConn.readByte();
+    //std::cout << val << std::endl;;
+    
+    
+}
+
 ////////////////////////////////////////////////////
 // Initalise the QSPU                             //
 ////////////////////////////////////////////////////
-void QuantumSeedUnit::init()
+void UVProcessingUnit::init()
 {
     // Empty the list of devices
     mDeviceList.clear();
@@ -55,7 +69,7 @@ void QuantumSeedUnit::init()
     DIR *dir;
     dir = opendir("/dev");
     
-    string deviceName = "";
+    std::string deviceName = "";
     
     mConnection = -1;
     
@@ -76,12 +90,13 @@ void QuantumSeedUnit::init()
         while((entry = readdir(dir)) != nullptr)
         {
             deviceName = (char *)entry->d_name;
+            
             // If it is a serial device
             // Must be plugged into right hand side usb (port 1411 is the left)
-            if( deviceName.substr(0, deviceName.length()) == "tty.usbmodem14131" ||
-               deviceName.substr(0, deviceName.length()) == "cu.usbmodem14131" )
-            //if( deviceName.substr(0, deviceName.length()) == "tty.usbmodem1411" ||
-            //    deviceName.substr(0, deviceName.length()) == "cu.usbmodem1411" )
+            //if( deviceName.substr(0, deviceName.length()) == "tty.usbmodem1421" ||
+            //   deviceName.substr(0, deviceName.length()) == "cu.usbmodem1421" )
+            if( deviceName.substr(0, deviceName.length()) == "tty.usbmodem1421" ||
+               deviceName.substr(0, deviceName.length()) == "cu.usbmodem1421" )
             {
                 std::cout << "serial device[" << deviceCount << "]: " << deviceName << std::endl;
                 
@@ -95,13 +110,12 @@ void QuantumSeedUnit::init()
         // Close the serial devices directory
         closedir(dir);
     }
-    
 }
 
 ////////////////////////////////////////////////////
 // Connect to serial device                       //
 ////////////////////////////////////////////////////
-bool QuantumSeedUnit::connect(int indx, int baud)
+bool UVProcessingUnit::connect(int indx, int baud)
 {
     printf("Connecting to serial port: %i\n", indx);
     
@@ -134,9 +148,8 @@ bool QuantumSeedUnit::connect(int indx, int baud)
             options.c_cflag |= CS8;
             tcsetattr(mConnection, TCSANOW, &options);
             
-            
             // Start the update function running in the background so that it does not block the main loop
-            mThread = new std::thread(&QuantumSeedUnit::updateAsThread, this);
+            mThread = new std::thread(&UVProcessingUnit::updateAsThread, this);
         }
     }
     
@@ -150,7 +163,7 @@ bool QuantumSeedUnit::connect(int indx, int baud)
 ////////////////////////////////////////////////////
 // Find the arduino device to connect to          //
 ////////////////////////////////////////////////////
-bool QuantumSeedUnit::connectArduino()
+bool UVProcessingUnit::connectArduino()
 {
     mConnected = false;
     
@@ -167,9 +180,9 @@ bool QuantumSeedUnit::connectArduino()
     // Display message on console
     if(mConnected)
     {
-        printf("Connected to Quantum Random Seed Processing Unit\n");
+        printf("Connected to UV Processing Unit\n");
     }else{
-        printf("Couldn't connect to Quantum Random Seed Processing Unit\n");
+        printf("Couldn't connect to UV Processing Unit\n");
     }
     
     return mConnected;
@@ -178,45 +191,40 @@ bool QuantumSeedUnit::connectArduino()
 ////////////////////////////////////////////////////
 // Update function that runs in the background    //
 ////////////////////////////////////////////////////
-void QuantumSeedUnit::updateAsThread()
+void UVProcessingUnit::updateAsThread()
 {
-     mThreadRunning = true;
+    mThreadRunning = true;
     
     int bitIndx = 0;
     
     // This stores our 32 bit random seed (each unsigned char is 8 bits)
-    unsigned char tmpByte[4];
     
     // Loop until the thread is closed
     while(mThreadRunning)
     {
         // Read in some data from the serial connection
         unsigned char tmp;
+        
         int nRead = read(mConnection, &tmp, 1);
         
         // If there is some data to read
         if(nRead > 0  && tmp != '\n')
         {
-            mDetectedDecay=true;
+            //mDetectedDecay=true;
             //printf("detected decay!\n");
             // Save the data in our array
-            tmpByte[bitIndx] = tmp;
-            bitIndx++;
+            //tmpByte[bitIndx] = tmp;
             
-            // Once our array is full we can construct our 32 bit seed
-            if(bitIndx >= 4)
-            {
-                // Reset the bit indx for the next iteration
-                bitIndx = 0;
-                
-                // Pack the 8 bit chars into our 32 bit int
-                mSeed =   tmpByte[0] |
-                ( tmpByte[1] << 8)  |
-                ( tmpByte[2] << 16) |
-                ( tmpByte[3] << 24    );
-                
-            }
+            int val = (int)tmp;
+            
+            int ldrIndx = val / 10;
+            
+            mLDRvalues[ldrIndx] = val - ldrIndx * 10;
+            
+            
+            
         }
+        
         
         // Sleep for one second to allow other processes time to run
         //std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -224,25 +232,15 @@ void QuantumSeedUnit::updateAsThread()
     }
 }
 
+int * UVProcessingUnit::getLDRValues()
+{
+    return mLDRvalues;
+}
+
 ////////////////////////////////////////////////////
 // Test if the QSPU is connected                  //
 ////////////////////////////////////////////////////
-bool QuantumSeedUnit::isConnected()
+bool UVProcessingUnit::isConnected()
 {
     return mConnected;
-}
-
-long  QuantumSeedUnit::getSeed()
-{
-    return mSeed;
-}
-
-bool QuantumSeedUnit::hasDetectedDecay()
-{
-    if(mDetectedDecay)
-    {
-        mDetectedDecay = false;
-        return true;
-    }else
-        return false;
 }

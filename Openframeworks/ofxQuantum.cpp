@@ -1,12 +1,4 @@
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//  ofxQuantum.cpp
-//
-//  Created by Jayson Haebich, 2016 www.jaysonh.com
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#include "ofxQuantum.h"
+#include "ofxQuantum.hpp"
 
 
 ////////////////////////////////////////////////////
@@ -84,7 +76,7 @@ void ofxQuantum::threadedFunction()
         }
         
         // This thread doesn't need much cpu time so sleep for 200ms
-        sleep(200);
+        sleep(10);
     }
 }
 
@@ -95,4 +87,9 @@ void ofxQuantum::threadedFunction()
 long long ofxQuantum::getSeed()
 {
     return mSeed;
+}
+
+bool ofxQuantum::decayDetected()
+{
+    return mSeedUnit.hasDetectedDecay();
 }
